@@ -1,45 +1,55 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import { v4 as uuidv4 } from "uuid";
 import "./Header.css";
-import { faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSearch,
+  faUserMinus,
+  faXmark,
+  faAddressBook,
+  faPhone,
+  faEnvelope,
+  faCity,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const Header = () => {
   const [showAddContactPopup, setShowAddContactPopup] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [newContact, setNewContact] = useState({
+    id: uuidv4(),
     name: "",
     phone: "",
     email: "",
     city: "",
   });
-
-  //Filtrar contactos
-
   const [searchTerm, setSearchTerm] = useState("");
+  const [filteredContacts, setFilteredContacts] = useState([]);
+
+  // Cargar contactos desde localStorage al inicio
+  useEffect(() => {
+    const storedContacts = JSON.parse(localStorage.getItem("contacts")) || [];
+    setContacts(storedContacts);
+  }, []);
+
+  // Actualizar localStorage cada vez que cambian los contactos
+  useEffect(() => {
+    localStorage.setItem("contacts", JSON.stringify(contacts));
+  }, [contacts]);
 
   useEffect(() => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
     const filteredContacts = contacts.filter((contact) => {
-      const searchString = searchTerm.toLowerCase();
       return (
-        contact.name.toLowerCase().includes(searchString) ||
-        contact.phone.includes(searchString) ||
-        contact.email.toLowerCase().includes(searchString) ||
-        contact.city.toLowerCase().includes(searchString)
+        contact.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+        contact.phone.includes(lowerCaseSearchTerm) ||
+        contact.email.toLowerCase().includes(lowerCaseSearchTerm) ||
+        contact.city.toLowerCase().includes(lowerCaseSearchTerm)
       );
     });
 
-    const contactsContainer = document.getElementById("contacts-container");
-    contactsContainer.innerHTML = filteredContacts.map((contact) => (
-      <div key={contact.id}>
-        {`${contact.name} - ${contact.phone} - ${contact.email} - ${contact.city}`}
-      </div>
-    ));
-
-    filteredContacts.forEach((contact) => {
-      const contactDiv = document.createElement("div");
-      contactDiv.innerHTML = `${contact.name} - ${contact.phone} - ${contact.email} - ${contact.city}`;
-      contactsContainer.appendChild(contactDiv);
-    });
+    setFilteredContacts(filteredContacts);
   }, [contacts, searchTerm]);
 
   const handleAddContactClick = () => {
@@ -56,6 +66,7 @@ const Header = () => {
 
   const handleAddContact = () => {
     const newContactObject = {
+      id: uuidv4(),
       name: newContact.name,
       phone: newContact.phone,
       email: newContact.email,
@@ -64,6 +75,7 @@ const Header = () => {
 
     setContacts((prevContacts) => [...prevContacts, newContactObject]);
     setNewContact({
+      id: uuidv4(),
       name: "",
       phone: "",
       email: "",
@@ -72,17 +84,47 @@ const Header = () => {
     setShowAddContactPopup(false);
   };
 
-  useEffect(() => {
-    // Cuando se actualiza la lista de contactos, actualiza el DOM
-    const contactsContainer = document.getElementById("contacts-container");
-    contactsContainer.innerHTML = ""; // Limpia el contenido existente
+  const handleDeleteContact = (contactId) => {
+    setContacts((prevContacts) =>
+      prevContacts.filter((contact) => contact.id !== contactId)
+    );
+  };
 
-    contacts.forEach((contact) => {
-      const contactDiv = document.createElement("div");
-      contactDiv.innerHTML = `${contact.name} - ${contact.phone} - ${contact.email} - ${contact.city}`;
-      contactsContainer.appendChild(contactDiv);
-    });
-  }, [contacts]);
+  const Contactos = ({ contact }) => {
+    return (
+      <div className="contacto-card-new" key={contact.id}>
+        <div className="contacto-card-text-new">
+          <div className="contact-number">
+            <p className="contacto-card-word">
+              <FontAwesomeIcon
+                icon={faUserMinus}
+                onClick={() => handleDeleteContact(contact.id)}
+              />
+            </p>
+          </div>
+          <p className="contacto-card-text-name-new">
+            <FontAwesomeIcon
+              className="icon-contact-card"
+              icon={faAddressBook}
+            />
+            {contact.name}
+          </p>
+          <p className="contacto-card-text-mobile-new">
+            <FontAwesomeIcon className="icon-contact-card" icon={faPhone} />
+            {contact.phone}
+          </p>
+          <p className="contacto-card-text-email-new">
+            <FontAwesomeIcon className="icon-contact-card" icon={faEnvelope} />
+            {contact.email}
+          </p>
+          <p className="contacto-card-text-city-new">
+            <FontAwesomeIcon className="icon-contact-card" icon={faCity} />
+            {contact.city}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <header>
@@ -96,7 +138,6 @@ const Header = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-
           <FontAwesomeIcon icon={faSearch} className="search-icon" />
           <button className="button-add" onClick={handleAddContactClick}>
             Add contact
@@ -116,7 +157,6 @@ const Header = () => {
                 Add a new contact
               </h3>
             </div>
-            {/* Contenido del pop-up para agregar contacto */}
             <div>
               <input
                 className="input-add-contact"
@@ -157,10 +197,30 @@ const Header = () => {
           </div>
         )}
       </nav>
-      {/* Contenedor para mostrar los contactos en el body */}
-      <div id="contacts-container"></div>
+      <div id="contacts-container">
+        {filteredContacts.map((contact) => (
+          <Contactos key={contact.id} contact={contact} />
+        ))}
+      </div>
     </header>
   );
+};
+
+Header.propTypes = {
+  showAddContactPopup: PropTypes.bool,
+  contacts: PropTypes.array,
+  newContact: PropTypes.shape({
+    id: PropTypes.string,
+    name: PropTypes.string,
+    phone: PropTypes.string,
+    email: PropTypes.string,
+    city: PropTypes.string,
+  }),
+  searchTerm: PropTypes.string,
+  filteredContacts: PropTypes.array,
+  handleAddContactClick: PropTypes.func,
+  handleInputChange: PropTypes.func,
+  handleAddContact: PropTypes.func,
 };
 
 export default Header;
